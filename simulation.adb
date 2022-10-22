@@ -69,9 +69,18 @@ procedure Simulation is
 	 Put_Line("Doszłą " & Product_Name(Product_Type_Number)
 		    & " number "  & Integer'Image(Product_Number));
 	 -- Accept for storage
-	 B.Take(Product_Type_Number, Product_Number);
-	 Product_Number := Product_Number + 1;
-      end loop;
+
+		loop
+			select
+				B.Take(Product_Type_Number, Product_Number);
+				Product_Number := Product_Number + 1;
+				exit;
+			or delay 0.15;
+				Put_Line("dostawca zgłosił brak odbioru produktu " & Product_Name(Product_Type_Number) & " z powodu za dużej ilości dostawców");
+				exit;
+			end select;
+		end loop;
+	  end loop;
    end Producer;
 
    task body Consumer is
@@ -100,14 +109,22 @@ procedure Simulation is
 	 delay Duration(Random_Consumption.Random(G)); --  simulate consumption
 	 Assembly_Type := Random_Assembly.Random(G2);
 	 -- take an assembly for consumption
-	 B.Deliver(Assembly_Type, Assembly_Number);
-	 if  Assembly_Number /= 0 then
-	 	Put_Line(Consumer_Name(Consumer_Nb) & ": taken assembly " &
-		    Assembly_Name(Assembly_Type) & " number " &
-		    Integer'Image(Assembly_Number));
-	 else
-	 	Put_Line(Consumer_Name(Consumer_Nb) & ": Didn't get his orderand left in anger ");
-     end if;
+	 loop
+	 	select
+		 	B.Deliver(Assembly_Type, Assembly_Number);
+			if Assembly_Number /= 0 then
+	 			Put_Line(Consumer_Name(Consumer_Nb) & ": Dostał damuwienie " &
+		    		Assembly_Name(Assembly_Type) & " number " &
+		    		Integer'Image(Assembly_Number));
+				exit;
+			else 
+				Put_Line(Consumer_Name(Consumer_Nb) & ": Wyszedł zdenerwowany bo nie mógł zamówić  " & Assembly_Name(Assembly_Type));	
+			end if;
+	 	or delay 0.2;
+	 		Put_Line(Consumer_Name(Consumer_Nb) & ": Zdenerwował się dużą kolejką i zrezygnował z zamównienia " & Assembly_Name(Assembly_Type));
+			exit;
+		end select;
+     end loop;
 	  end loop;
    end Consumer;
 
@@ -245,7 +262,7 @@ procedure Simulation is
 	    	else
 			--IMP
 	    	   Put_Line("Niestety aktualnie nie mamy artykułów na " & Assembly_Name(Assembly));
-	    	   --Number := 0;
+	    	   Number := 0;
 	    	   --Assembly_Number(Assembly) := Assembly_Number(Assembly) + 1;
 	    	end if;
 		 end Deliver;
